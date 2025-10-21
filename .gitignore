@@ -9,9 +9,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Model files
-*.pkl
-
 # Jupyter checkpoints
 .ipynb_checkpoints/
 
