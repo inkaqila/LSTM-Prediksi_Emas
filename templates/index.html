@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prediksi Harga Emas</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📈 Prediksi Harga Emas dengan LSTM</h1>
+      <p>Menggunakan data historis harga emas harian (2004–2024)</p>
+    </header>
+
+    <div class="card">
+      <h3 class="card-title">📊 Hasil Evaluasi Model</h3>
+      <div class="metric-box">
+        <span class="metric-label">RMSE</span>
+        <span id="rmse-value" class="metric-value">Loading...</span>
+      </div>
+      <div class="metric-box">
+        <span class="metric-label">MAE</span>
+        <span id="mae-value" class="metric-value">Loading...</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">📈 Grafik Prediksi vs Aktual</h3>
+      <div class="chart-container" id="chart"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">🔮 Prediksi 10 Hari ke Depan</h3>
+      <div class="chart-container" id="forecast-chart"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">📅 Prediksi 1 Hari Berikutnya</h3>
+      <div id="next-day-prediction" style="text-align: center; padding: 20px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+        <p id="next-day-message">Klik tombol di bawah untuk melihat prediksi harga emas besok.</p>
+      </div>
+      <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+        <button class="btn-primary" onclick="predictNextDay()">Predict 1 Day</button>
+        <button class="btn-danger" onclick="resetPrediction()">Reset</button>
+      </div>
+    </div>
+
+    <div class="footer">
+      Project TA-04 — Prediksi Harga Emas Harian Menggunakan LSTM
+    </div>
+  </div>
+
+  <script>
+    // Muat data evaluasi saat halaman dimuat
+    window.onload = function() {
+      fetch('/evaluate')
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            document.getElementById('rmse-value').textContent = 'Error';
+            document.getElementById('mae-value').textContent = 'Error';
+            alert('Error: ' + data.error);
+            return;
+          }
+
+          document.getElementById('rmse-value').textContent = data.rmse.toFixed(2);
+          document.getElementById('mae-value').textContent = data.mae.toFixed(2);
+
+          // Plot grafik aktual vs prediksi
+          Plotly.newPlot('chart', [
+            {
+              x: data.dates_actual,
+              y: data.actual,
+              type: 'scatter',
+              mode: 'lines',
+              name: 'Harga Asli',
+              line: {color: 'blue'}
+            },
+            {
+              x: data.dates_pred,
+              y: data.predicted,
+              type: 'scatter',
+              mode: 'lines+markers',
+              name: 'Prediksi',
+              line: {color: 'orange', dash: 'dot'}
+            }
+          ], {
+            title: 'Perbandingan Harga Emas: Aktual vs Prediksi',
+            xaxis: {title: 'Tanggal'},
+            yaxis: {title: 'Harga (USD)'},
+            showlegend: true
+          });
+
+          // Plot prediksi 10 hari ke depan
+          Plotly.newPlot('forecast-chart', [
+            {
+              x: data.forecast_dates,
+              y: data.forecast_prices,
+              type: 'scatter',
+              mode: 'lines+markers',
+              name: 'Prediksi 10 Hari',
+              line: {color: 'green', width: 2}
+            }
+          ], {
+            title: 'Prediksi Harga Emas 10 Hari Ke Depan',
+            xaxis: {title: 'Tanggal'},
+            yaxis: {title: 'Harga (USD)'},
+            showlegend: false
+          });
+        })
+        .catch(err => {
+          console.error('Error fetching data:', err);
+          document.getElementById('rmse-value').textContent = 'Error';
+          document.getElementById('mae-value').textContent = 'Error';
+          alert('Gagal memuat data. Cek terminal untuk error.');
+        });
+    };
+
+    function predictNextDay() {
+      fetch('/predict_one_day')
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            document.getElementById('next-day-message').innerHTML = `<span style="color: red;">${data.error}</span>`;
+            return;
+          }
+          document.getElementById('next-day-message').innerHTML = `
+            <strong>🗓️ ${data.date}</strong><br>
+            <span style="font-size: 1.5rem; color: #bb86fc;">$${data.price.toFixed(2)}</span><br>
+            <small>${data.message}</small>
+          `;
+        })
+        .catch(err => {
+          document.getElementById('next-day-message').innerHTML = `<span style="color: red;">Gagal memprediksi. Error: ${err.message}</span>`;
+        });
+    }
+
+    function resetPrediction() {
+      document.getElementById('next-day-message').innerHTML = 'Klik tombol di bawah untuk melihat prediksi harga emas besok.';
+    }
+  </script>
+</body>
+</html>
